@@ -1,17 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useContext, useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import * as zod from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { differenceInSeconds } from 'date-fns'
 
-interface Cycle {
-    id: string
-    task: string
-    minutesAmount: number
-    startDate: Date
-    interruptedDate?: Date
-    finishedDate?: Date
-}
+import { CyclesContext } from '../../contexts/CyclesContext'
 
 const newCycleFormValidationSchema = zod.object({
     task: zod.string().min(1, 'Informe uma tarefa'),
@@ -21,9 +14,16 @@ const newCycleFormValidationSchema = zod.object({
 type NewCycleFormData = zod.infer<typeof newCycleFormValidationSchema>
 
 export function useHome() {
-    const [cycles, setCycles] = useState<Cycle[]>([])
-    const [activeCycleId, setActiveCycleId] = useState<string | null>(null)
-    const [amountSecondsPasses, setAmountSecondsPassed] = useState(0)
+    const {
+        activeCycle,
+        activeCycleId,
+        amountSecondsPassed,
+        setActiveCycleId,
+        createNewCycle,
+        interruptCurrentCycle,
+        markCurrentCycleAsFinished,
+        setSecondsPassed,
+    } = useContext(CyclesContext)
 
     const { register, handleSubmit, watch, reset } = useForm<NewCycleFormData>({
         resolver: zodResolver(newCycleFormValidationSchema),
@@ -34,42 +34,12 @@ export function useHome() {
     })
 
     const handleCreateNewCycle = (data: NewCycleFormData) => {
-        const id = String(new Date().getTime())
-
-        const newCycle: Cycle = {
-            id,
-            task: data.task,
-            minutesAmount: data.minutesAmount,
-            startDate: new Date(),
-        }
-
-        setCycles((state) => [...state, newCycle])
-        setActiveCycleId(id)
-        setAmountSecondsPassed(0)
-
+        createNewCycle(data)
         reset()
     }
 
-    const handleInterruptCycle = () => {
-        setCycles((state) =>
-            state.map((cycle) => {
-                if (cycle.id === activeCycleId) {
-                    return { ...cycle, interruptedDate: new Date() }
-                } else {
-                    return cycle
-                }
-            }),
-        )
-
-        setActiveCycleId(null)
-
-        document.title = `Ignite timer`
-    }
-
-    const activeCycle = cycles.find((cycle) => cycle.id === activeCycleId)
-
     const totalSeconds = activeCycle ? activeCycle.minutesAmount * 60 : 0
-    const currentSeconds = activeCycle ? totalSeconds - amountSecondsPasses : 0
+    const currentSeconds = activeCycle ? totalSeconds - amountSecondsPassed : 0
 
     const minutesAmount = Math.floor(currentSeconds / 60)
     const secondsAmount = currentSeconds % 60
@@ -88,29 +58,32 @@ export function useHome() {
                 )
 
                 if (secondsDifference >= totalSeconds) {
-                    setCycles((state) =>
-                        state.map((cycle) => {
-                            if (cycle.id === activeCycleId) {
-                                return { ...cycle, finishedDate: new Date() }
-                            } else {
-                                return cycle
-                            }
-                        }),
-                    )
+                    markCurrentCycleAsFinished()
 
-                    setAmountSecondsPassed(totalSeconds)
+                    setSecondsPassed(totalSeconds)
+                    setActiveCycleId(null)
                     clearInterval(interval)
+
+                    document.title = `Ignite timer`
+
                     return
                 }
 
-                setAmountSecondsPassed(secondsDifference)
+                setSecondsPassed(secondsDifference)
             }, 1000)
         }
 
         return () => {
             clearInterval(interval)
         }
-    }, [activeCycle, totalSeconds, activeCycleId])
+    }, [
+        activeCycle,
+        totalSeconds,
+        activeCycleId,
+        markCurrentCycleAsFinished,
+        setSecondsPassed,
+        setActiveCycleId,
+    ])
 
     useEffect(() => {
         if (activeCycle) {
@@ -122,7 +95,7 @@ export function useHome() {
 
     return {
         handleCreateNewCycle,
-        handleInterruptCycle,
+        interruptCurrentCycle,
         isSubmitDisabled,
         activeCycle,
         minutes,

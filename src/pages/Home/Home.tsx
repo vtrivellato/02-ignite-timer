@@ -16,7 +16,7 @@ import {
 export function Home() {
     const {
         handleCreateNewCycle,
-        handleInterruptCycle,
+        interruptCurrentCycle,
         isSubmitDisabled,
         activeCycle,
         minutes,
@@ -71,7 +71,7 @@ export function Home() {
                 {activeCycle ? (
                     <StopCountdownButton
                         type="button"
-                        onClick={handleInterruptCycle}
+                        onClick={interruptCurrentCycle}
                     >
                         <HandPalm size={24} />
                         Interromper
