@@ -18,7 +18,6 @@ export function useHome() {
         activeCycle,
         activeCycleId,
         amountSecondsPassed,
-        setActiveCycleId,
         createNewCycle,
         interruptCurrentCycle,
         markCurrentCycleAsFinished,
@@ -54,14 +53,13 @@ export function useHome() {
             interval = setInterval(() => {
                 const secondsDifference = differenceInSeconds(
                     new Date(),
-                    activeCycle.startDate,
+                    new Date(activeCycle.startDate),
                 )
 
                 if (secondsDifference >= totalSeconds) {
                     markCurrentCycleAsFinished()
 
                     setSecondsPassed(totalSeconds)
-                    setActiveCycleId(null)
                     clearInterval(interval)
 
                     document.title = `Ignite timer`
@@ -82,7 +80,6 @@ export function useHome() {
         activeCycleId,
         markCurrentCycleAsFinished,
         setSecondsPassed,
-        setActiveCycleId,
     ])
 
     useEffect(() => {
